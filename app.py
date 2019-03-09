@@ -1,15 +1,24 @@
 from bs4 import BeautifulSoup
 import requests
+import argparse
 import random
 import pandas
 import time
 
-companies = ['travel/airbnb']
+parser = argparse.ArgumentParser(description='This script extract reviews deom companies.')
+parser.add_argument('--site', default='sitejabber', help="The website from where the reviews are extracted.")
+parser.add_argument('--ratings', default='1,2,3,4,5', help="The ratings to extract.")
+parser.add_argument('--companies', default='ebay.com', help="The companies to extract information.")
+args = parser.parse_args()
+
+site = args.site
+if ',' in args.companies:
+	companies = args.companies.split(',')
+else:
+	companies = [args.companies]
+ratings = args.ratings.split(',')
 min_time = 0
 max_time = 1
-start_page = 1
-site = 'consumeraffairs'
-ratings = [1,2,3,4,5]
 selectors_row = {}
 selectors_row['sitejabber'] = {}
 selectors_row['sitejabber']['title'] = {'sel':'.review_title'}
@@ -71,28 +80,6 @@ def extract_sitejabber(company,ratings):
 					reviews.append(review)
 	return reviews
 
-def extract_sitejabber(company,ratings):
-	reviews = []
-	for rating in ratings:
-		page = 1
-		while True:
-			print('Extracting company: %s Rating: %s Page: %s'%(company,rating,page))
-			time.sleep(random.randint(min_time, max_time))
-			url = 'https://www.sitejabber.com/reviews/%s?page=%s&rating=%s#reviews' % (company, page, rating)
-			r = requests.get(url)
-			html_doc = r.text
-			soup = BeautifulSoup(html_doc, 'html.parser')
-			all_reviews = soup.select('.review_row')
-			if len(all_reviews) == 0:
-				break
-			else:
-				page += 1
-				for one_review in all_reviews:
-					review = get_values(one_review, selectors_row)
-					review['rating'] = rating
-					reviews.append(review)
-	return reviews
-
 if site == 'sitejabber':
 	for company in companies:
 		reviews	= extract_sitejabber(company,ratings)
@@ -104,4 +91,3 @@ elif site == 'consumeraffairs':
 		df = pandas.DataFrame(reviews)
 		company = company.replace('/','_')
 		df.to_csv('%s_%s.csv'%(company,site))
-	
